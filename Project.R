@@ -53,10 +53,10 @@ acf(returnsDataSet$fchi_returns, col="green", lwd=2)
 pacf(returnsDataSet$fchi_returns, col="green", lwd=2)
 acf(returnsDataSet$fchi_returns^2, col="red", lwd=2)
 pacf(returnsDataSet$fchi_returns^2, col="red", lwd=2)
-#so we will use 12 lags. (?)
+#so we will use 3 lags. (?)
 
 modeln225=garchFit(formula=~arma(3,0)+garch(1,1),data=returnsDataSet$n225_returns,trace=F,cond.dist="norm")
-modelfchi=garchFit(formula=~arma(12,0)+garch(1,1),data=returnsDataSet$fchi_returns,trace=F,cond.dist="norm")
+modelfchi=garchFit(formula=~arma(3,0)+garch(1,1),data=returnsDataSet$fchi_returns,trace=F,cond.dist="norm")
 print(modeln225)
 
 
@@ -68,6 +68,33 @@ acf(res1^2, col="red", lwd=2)
 par(mfrow=c(1,1))
 Box.test(res1, lag = 10, type = c("Ljung-Box"), fitdf = 1)
 Box.test(res1^2, lag = 10, type = c("Ljung-Box"), fitdf = 1)
-
-u1<-pnorm(res1, mean=0, sd=1)[4:numOfWeeks]
+u1<-pnorm(res1, mean=0, sd=1)[4:numOfWeeks-3]
 hist(u1)
+print (rev(u1))
+res2 <- residuals(modelfchi, standardize=TRUE)
+par(mfrow=c(2,1))
+acf(res2, col="green", lwd=2)
+acf(res2^2, col="red", lwd=2)
+par(mfrow=c(1,1))
+Box.test(res2, lag = 10, type = c("Ljung-Box"), fitdf = 1)
+Box.test(res2^2, lag = 10, type = c("Ljung-Box"), fitdf = 1)
+
+
+
+u2<-pnorm(res2, mean=0, sd=1)[4:numOfWeeks-3]
+
+hist(u2)
+
+#generating epsilon using copulas
+copModel=BiCopSelect(u1, u2, familyset=NA, selectioncrit="AIC", indeptest=TRUE, level=0.05,se = TRUE)
+copModel
+#the best model to use is the Bivariate copula: t (par = 0.6, par2 = 17.31, tau = 0.41) so we will use students t
+N=10000
+varEstimate1 = 
+u_sim=BiCopSim(N, family=copModel$family, copModel$par,  copModel$par2)
+res1_sim=qnorm(u_sim[,1], mean = 0, sd = 1) 
+res2_sim=qnorm(u_sim[,2], mean = 0, sd = 1) 
+print(tail(u1, n=1))
+#introduce GARCH effects
+sigmaSquaredHat1=modeln225$omega + modeln225$alpha1 * (tail(u1, n=1))^2+ modeln225$beta1 * (tail(varEstimate1, n=1))^2
+
