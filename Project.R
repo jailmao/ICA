@@ -1,4 +1,4 @@
-#install.packages("tidyverse") 
+#install.packages("fBasics") 
 #uncomment if you dont have it installed
 library(tidyverse)
 library(VineCopula)
@@ -7,6 +7,7 @@ library(KScorrect)
 library(stats)
 library(ADGofTest)
 library(tseries)
+library(fBasics)
 
 n225 <- read.csv("~/STAT/ICA/N225.csv", stringsAsFactors=FALSE)
 fchi <- read.csv("~/STAT/ICA/FCHI.csv", stringsAsFactors=FALSE)
@@ -25,8 +26,8 @@ for (i in 1:numOfWeeks-1){
   returnsDataSet[i,1]=i
   returnsDataSet[i,2]=n225_r(i)
   returnsDataSet[i,3]=fchi_r(i)
-  returnsDataSet[i,4]=as.numeric(n225[i,6])
-  returnsDataSet[i,5]=as.numeric(fchi[i,6])
+  returnsDataSet[i,4]=as.numeric(n225[i+1,6])
+  returnsDataSet[i,5]=as.numeric(fchi[i+1,6])
  
 }
 returnsDataSet <- na.omit(returnsDataSet)
@@ -57,7 +58,7 @@ pacf(returnsDataSet$fchi_returns^2, col="red", lwd=2)
 
 modeln225=garchFit(formula=~arma(3,0)+garch(1,1),data=returnsDataSet$n225_returns,trace=F,cond.dist="norm")
 modelfchi=garchFit(formula=~arma(3,0)+garch(1,1),data=returnsDataSet$fchi_returns,trace=F,cond.dist="norm")
-print(modeln225)
+modeln225
 
 
 # Step 3: Model checking
@@ -89,12 +90,27 @@ hist(u2)
 copModel=BiCopSelect(u1, u2, familyset=NA, selectioncrit="AIC", indeptest=TRUE, level=0.05,se = TRUE)
 copModel
 #the best model to use is the Bivariate copula: t (par = 0.6, par2 = 17.31, tau = 0.41) so we will use students t
-N=10000
-varEstimate1 = 
+N=3
+varEstimate1 <- slot(modeln225, "sigma.t")
+varEstimate1
 u_sim=BiCopSim(N, family=copModel$family, copModel$par,  copModel$par2)
 res1_sim=qnorm(u_sim[,1], mean = 0, sd = 1) 
 res2_sim=qnorm(u_sim[,2], mean = 0, sd = 1) 
+res1_sim
 print(tail(u1, n=1))
 #introduce GARCH effects
-sigmaSquaredHat1=modeln225$omega + modeln225$alpha1 * (tail(u1, n=1))^2+ modeln225$beta1 * (tail(varEstimate1, n=1))^2
+sigmaSquaredHat1=modeln225@fit$coef["omega"] + modeln225@fit$coef["alpha1"] * (tail(u1, n=1))^2+ modeln225@fit$coef["beta1"] * (tail(varEstimate1, n=1))^2
+tail=as.numeric(tail(returnsDataSet$n225_returns, n=3))
 
+sim_values_n225 = (modeln225@fit$coef["mu"]+modeln225@fit$coef["ar1"]*tail[3] +modeln225@fit$coef["ar2"]*tail[2] +modeln225@fit$coef["ar3"]*tail[1])+sigmaSquaredHat1*res1_sim
+
+
+#and for the other model
+varEstimate2 <- slot(modelfchi, "sigma.t")
+varEstimate2
+sigmaSquaredHat2=modelfchi@fit$coef["omega"] + modelfchi@fit$coef["alpha1"] * (tail(u2, n=1))^2+ modelfchi@fit$coef["beta1"] * (tail(varEstimate2, n=1))^2
+tail2=as.numeric(tail(returnsDataSet$fchi_returns, n=3))
+
+sim_values_fchi = (modelfchi@fit$coef["mu"]+modelfchi@fit$coef["ar1"]*tail2[3] +modelfchi@fit$coef["ar2"]*tail2[2] +modelfchi@fit$coef["ar3"]*tail2[1])+sigmaSquaredHat2*res2_sim
+sim_values_n225
+sim_values_fchi
