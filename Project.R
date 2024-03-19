@@ -8,6 +8,7 @@ library(stats)
 library(ADGofTest)
 library(tseries)
 library(fBasics)
+library(MASS)
 
 n225 <- read.csv("~/STAT/ICA/N225.csv", stringsAsFactors=FALSE)
 fchi <- read.csv("~/STAT/ICA/FCHI.csv", stringsAsFactors=FALSE)
@@ -90,7 +91,7 @@ hist(u2)
 copModel=BiCopSelect(u1, u2, familyset=NA, selectioncrit="AIC", indeptest=TRUE, level=0.05,se = TRUE)
 copModel
 #the best model to use is the Bivariate copula: t (par = 0.6, par2 = 17.31, tau = 0.41) so we will use students t
-N=3
+N=10000
 varEstimate1 <- slot(modeln225, "sigma.t")
 varEstimate1
 u_sim=BiCopSim(N, family=copModel$family, copModel$par,  copModel$par2)
@@ -114,3 +115,19 @@ tail2=as.numeric(tail(returnsDataSet$fchi_returns, n=3))
 sim_values_fchi = (modelfchi@fit$coef["mu"]+modelfchi@fit$coef["ar1"]*tail2[3] +modelfchi@fit$coef["ar2"]*tail2[2] +modelfchi@fit$coef["ar3"]*tail2[1])+sigmaSquaredHat2*res2_sim
 sim_values_n225
 sim_values_fchi
+#find var
+hist(sim_values_n225)
+#this looks like a normal distribution  so lets fit one
+# Fit normal distribution to log-transformed values
+
+
+fit1 <- fitdistr(sim_values_n225, densfun = "normal")
+fit2 <- fitdistr(sim_values_fchi, densfun = "normal")
+portfolio_mean=0.5*(fit1$estimate[1]+fit2$estimate[1])
+portfolio_sd=sqrt(0.25*((fit1$estimate[2])^2+(fit2$estimate[2])^2)+0.5*(fit1$estimate[2])*(fit2$estimate[2])*cor(returnsDataSet$n225_returns, returnsDataSet$fchi_returns))
+
+VaR99=2.326*portfolio_sd-portfolio_mean
+VaR95=1.645*portfolio_sd-portfolio_mean
+
+VaR99
+VaR95
