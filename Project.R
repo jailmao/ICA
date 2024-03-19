@@ -9,6 +9,8 @@ library(ADGofTest)
 library(tseries)
 library(fBasics)
 library(MASS)
+library(quantmod)
+library(tidyquant)
 #import the historical data
 n225 <- read.csv("~/STAT/ICA/N225.csv", stringsAsFactors=FALSE)
 fchi <- read.csv("~/STAT/ICA/FCHI.csv", stringsAsFactors=FALSE)
@@ -92,28 +94,32 @@ model2=garchFit(formula=~arma(3,0)+garch(1,1),data=returnsDataSet$fchi_returns,t
 
 # Step 3: Model checking
 res1 <- residuals(model1, standardize=TRUE)
-par(mfrow=c(2,1))
+par(mfrow=c(2,2))
 acf(res1, col="green", lwd=2)
 acf(res1^2, col="red", lwd=2)
+pacf(res1, col="green", lwd=2)
+pacf(res1^2, col="red", lwd=2)
 par(mfrow=c(1,1))
 Box.test(res1, lag = 10, type = c("Ljung-Box"), fitdf = 1)
 Box.test(res1^2, lag = 10, type = c("Ljung-Box"), fitdf = 1)
 u1<-pnorm(res1, mean=0, sd=1)[4:numOfWeeks-3]
-hist(u1)
-print (rev(u1))
+
 
 res2 <- residuals(model2, standardize=TRUE)
-par(mfrow=c(2,1))
+par(mfrow=c(2,2))
 acf(res2, col="green", lwd=2)
 acf(res2^2, col="red", lwd=2)
+pacf(res2, col="green", lwd=2)
+pacf(res2^2, col="red", lwd=2)
 par(mfrow=c(1,1))
 Box.test(res2, lag = 10, type = c("Ljung-Box"), fitdf = 1)
 Box.test(res2^2, lag = 10, type = c("Ljung-Box"), fitdf = 1)
 
-
+#suggests we have captured autocorrelation
 
 u2<-pnorm(res2, mean=0, sd=1)[4:numOfWeeks-3]
-
+par(mfrow=c(2,1))
+hist(u1)
 hist(u2)
 
 #generating epsilon using copulas
@@ -144,12 +150,13 @@ varEstimate2
 sigmaSquaredHat2=model2@fit$coef["omega"] + model2@fit$coef["alpha1"] * (tail(u2, n=1))^2+ model2@fit$coef["beta1"] * (tail(varEstimate2, n=1))^2
 tail2=as.numeric(tail(returnsDataSet$fchi_returns, n=3))
 
-sim_values_2 = (model2@fit$coef["mu"]+model2@fit$coef["ar1"]*tail2[3] +model2@fit$coef["ar2"]*tail2[2] +model2@fit$coef["ar3"]*tail2[1])+sigmaSquaredHat2*res2_sim
+sim_values2 = (model2@fit$coef["mu"]+model2@fit$coef["ar1"]*tail2[3] +model2@fit$coef["ar2"]*tail2[2] +model2@fit$coef["ar3"]*tail2[1])+sigmaSquaredHat2*res2_sim
 sim_values1
-sim_values_2
+sim_values2
 #find var
 hist(sim_values1)
 #this looks like a normal distribution  so lets fit one
+hist(sim_values2)
 # Fit normal distribution to log-transformed values
 
 
