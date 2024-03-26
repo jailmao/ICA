@@ -63,7 +63,7 @@ distributions<- c("norm", "std", "sstd", "snorm", "sged", "ged")
 cond_dist_table1 <- data.frame(matrix(ncol=3, nrow=0, dimnames=list(NULL, c("dist", "aic", "bic"))))
 
 for (k in 1:6){  
-  model1=garchFit(formula=~arma(3,0)+garch(1,1),data=returnsDataSet$n225_returns,trace=F,cond.dist=distributions[k])
+  model1=garchFit(formula=~garch(1,1),data=returnsDataSet$n225_returns,trace=F,cond.dist=distributions[k])
   cond_dist_table1[k,1]=distributions[k]
   
   cond_dist_table1[k,2]=(summary(model1))$ics["AIC"]
@@ -74,7 +74,7 @@ cond_dist_table1
 #so we use the sstd
 cond_dist_table2 <- data.frame(matrix(ncol=3, nrow=0, dimnames=list(NULL, c("dist", "aic", "bic"))))
 for (k in 1:6){  
-  model1=garchFit(formula=~garch(1,1),data=returnsDataSet$fchi_returns,trace=F,cond.dist=distributions[k])
+  model1=garchFit(formula=~arma(1,0)+garch(1,1),data=returnsDataSet$fchi_returns,trace=F,cond.dist=distributions[k])
   cond_dist_table2[k,1]=distributions[k]
   
   cond_dist_table2[k,2]=(summary(model1))$ics["AIC"]
